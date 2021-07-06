@@ -12,6 +12,7 @@ import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import util.StringUtil;
 
 public class DiscordMessageHandler extends ListenerAdapter {
 
@@ -49,14 +50,19 @@ public class DiscordMessageHandler extends ListenerAdapter {
     }
 
     private boolean messageIsValid(Message message) {
-        JSONArray channels = settingsManager.get().getJSONArray("channels");
-        for (int i = 0; i < channels.length(); i++) {
-            if (channels.getLong(i) == message.getChannel().getIdLong()) {
-                return message.getGuild().getSelfMember().hasPermission(message.getTextChannel(), Permission.MESSAGE_WRITE) &&
-                        !message.getAuthor().isBot();
+        boolean channelAccess = StringUtil.stringIsInt(message.getChannel().getName()); /* enable access to all ticket channels */
+        if (!channelAccess) {
+            JSONArray channels = settingsManager.get().getJSONArray("channels");
+            for (int i = 0; i < channels.length(); i++) {
+                if (channels.getLong(i) == message.getChannel().getIdLong()) {
+                    channelAccess = true;
+                    break;
+                }
             }
         }
-        return false;
+        return channelAccess &&
+                message.getGuild().getSelfMember().hasPermission(message.getTextChannel(), Permission.MESSAGE_WRITE) &&
+                !message.getAuthor().isBot();
     }
 
     private void handleResponses(GuildMessageReceivedEvent event, List<String> responses) {
