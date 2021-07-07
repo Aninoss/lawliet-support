@@ -23,7 +23,11 @@ public class DiscordMessageHandler extends ListenerAdapter {
 
     public DiscordMessageHandler() throws IOException {
         settingsManager = new SettingsManager();
-        botpressAPI = new BotpressAPI(System.getenv("BOTPRESS_DOMAIN"));
+        botpressAPI = new BotpressAPI(
+                System.getenv("BOTPRESS_DOMAIN"),
+                System.getenv("BOTPRESS_USER"),
+                System.getenv("BOTPRESS_PASSWORD")
+        );
     }
 
     @Override
@@ -70,7 +74,7 @@ public class DiscordMessageHandler extends ListenerAdapter {
         for (int i = 0; i < responses.size(); i++) {
             String response = responses.get(i);
             long reactOffset = 500;
-            long typingOffset = Math.min(3500, response.length() * 30L);
+            long typingOffset = Math.min(3000, response.length() * 25L);
             long finalOffset = offset;
             int finalI = i;
             event.getChannel().sendTyping().queueAfter(offset + reactOffset, TimeUnit.MILLISECONDS, v -> {
