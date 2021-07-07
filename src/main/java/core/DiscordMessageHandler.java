@@ -69,8 +69,8 @@ public class DiscordMessageHandler extends ListenerAdapter {
         long offset = 0;
         for (int i = 0; i < responses.size(); i++) {
             String response = responses.get(i);
-            long reactOffset = 1000;
-            long typingOffset = Math.min(7000, response.length() * 75L);
+            long reactOffset = 500;
+            long typingOffset = Math.min(3500, response.length() * 30L);
             long finalOffset = offset;
             int finalI = i;
             event.getChannel().sendTyping().queueAfter(offset + reactOffset, TimeUnit.MILLISECONDS, v -> {
