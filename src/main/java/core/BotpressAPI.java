@@ -31,6 +31,10 @@ public class BotpressAPI {
     }
 
     public CompletableFuture<List<String>> request(String botId, String userId, String text) {
+        return request(botId, userId, text, true);
+    }
+
+    public CompletableFuture<List<String>> request(String botId, String userId, String text, boolean allowLogin) {
         String url = String.format("http://%s/api/v1/bots/%s/converse/%s/secured?include=nlu", domain, botId, userId);
         CompletableFuture<List<String>> future = new CompletableFuture<>();
 
@@ -52,19 +56,24 @@ public class BotpressAPI {
                 try {
                     JSONObject responseRootJson = new JSONObject(response.body().string());
                     if (responseRootJson.has("errorCode") && responseRootJson.getString("errorCode").equals("BP_0041")) {
-                        LOGGER.info("Refreshing invalid token");
-                        login().exceptionally(e -> {
-                            future.completeExceptionally(e);
-                            return null;
-                        }).thenAccept(token -> {
-                            self.token = token;
-                            LOGGER.info("Login successful");
-                            request(botId, userId, text)
-                                    .exceptionally(e -> {
-                                        future.completeExceptionally(e);
-                                        return null;
-                                    }).thenAccept(future::complete);
-                        });
+                        if (allowLogin) {
+                            LOGGER.info("Refreshing invalid token");
+                            login().thenAccept(token -> {
+                                self.token = token;
+                                LOGGER.info("Login successful");
+                                request(botId, userId, text, false)
+                                        .thenAccept(future::complete)
+                                        .exceptionally(e -> {
+                                            future.completeExceptionally(e);
+                                            return null;
+                                        });
+                            }).exceptionally(e -> {
+                                future.completeExceptionally(e);
+                                return null;
+                            });
+                        } else {
+                            future.completeExceptionally(new Exception("Received invalid token: " + self.token));
+                        }
                     } else {
                         boolean ambiguous = responseRootJson.getJSONObject("nlu").getBoolean("ambiguous");
                         if (ambiguous) {

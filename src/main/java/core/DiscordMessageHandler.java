@@ -37,11 +37,11 @@ public class DiscordMessageHandler extends ListenerAdapter {
                     System.getenv("BOTPRESS_BOTID"),
                     event.getAuthor().getId(),
                     processMessageContent(event.getMessage())
-            ).exceptionally(e -> {
+            ).thenAccept(responses -> {
+                handleResponses(event, responses);
+            }).exceptionally(e -> {
                 LOGGER.error("Exception on message retrieval", e);
                 return null;
-            }).thenAccept(responses -> {
-                handleResponses(event, responses);
             });
         }
     }
