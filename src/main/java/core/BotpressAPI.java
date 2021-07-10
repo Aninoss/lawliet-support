@@ -1,12 +1,14 @@
 package core;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import com.google.common.cache.Cache;
+import com.google.common.cache.CacheBuilder;
 import okhttp3.*;
-import org.checkerframework.checker.units.qual.C;
 import org.jetbrains.annotations.NotNull;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -23,11 +25,26 @@ public class BotpressAPI {
     private final String password;
     private String token = "none";
 
-    public BotpressAPI(String domain, String username, String password) {
+    private final Cache<String, Boolean> userCooldownCache;
+
+    public BotpressAPI(String domain, String username, String password, int cooldownMinutes) {
         this.client = new OkHttpClient();
         this.domain = domain;
         this.username = username;
         this.password = password;
+        this.userCooldownCache = CacheBuilder.newBuilder()
+                .expireAfterWrite(Duration.ofMinutes(cooldownMinutes))
+                .build();
+    }
+
+    public boolean isNew(String botId, String userId) {
+        String key = botId + ":" + userId;
+        if (userCooldownCache.asMap().containsKey(key)) {
+            return false;
+        } else {
+            userCooldownCache.put(key, true);
+            return true;
+        }
     }
 
     public CompletableFuture<List<String>> request(String botId, String userId, String text, double threshold) {

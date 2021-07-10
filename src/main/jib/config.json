@@ -3,5 +3,6 @@
     706236318329470986
   ],
   "role_ignored": 0,
-  "confidence_threshold": 0.8
+  "confidence_threshold": 0.8,
+  "cooldown_minutes": 60
 }

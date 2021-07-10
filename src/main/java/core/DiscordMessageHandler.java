@@ -26,16 +26,20 @@ public class DiscordMessageHandler extends ListenerAdapter {
         botpressAPI = new BotpressAPI(
                 System.getenv("BOTPRESS_DOMAIN"),
                 System.getenv("BOTPRESS_USER"),
-                System.getenv("BOTPRESS_PASSWORD")
+                System.getenv("BOTPRESS_PASSWORD"),
+                settingsManager.get().getInt("cooldown_minutes")
         );
     }
 
     @Override
     public void onGuildMessageReceived(@NotNull GuildMessageReceivedEvent event) {
-        if (messageIsValid(event)) {
+        String botId = System.getenv("BOTPRESS_BOTID");
+        String userId = event.getAuthor().getId();
+
+        if (messageIsValid(event) && botpressAPI.isNew(botId, userId)) {
             botpressAPI.request(
-                    System.getenv("BOTPRESS_BOTID"),
-                    event.getAuthor().getId(),
+                    botId,
+                    userId,
                     processMessageContent(event.getMessage()),
                     settingsManager.get().getDouble("confidence_threshold")
             ).thenAccept(responses -> {
