@@ -36,7 +36,8 @@ public class DiscordMessageHandler extends ListenerAdapter {
             botpressAPI.request(
                     System.getenv("BOTPRESS_BOTID"),
                     event.getAuthor().getId(),
-                    processMessageContent(event.getMessage())
+                    processMessageContent(event.getMessage()),
+                    settingsManager.get().getDouble("confidence_threshold")
             ).thenAccept(responses -> {
                 handleResponses(event, responses);
             }).exceptionally(e -> {

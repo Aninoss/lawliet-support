@@ -30,11 +30,11 @@ public class BotpressAPI {
         this.password = password;
     }
 
-    public CompletableFuture<List<String>> request(String botId, String userId, String text) {
-        return request(botId, userId, text, true);
+    public CompletableFuture<List<String>> request(String botId, String userId, String text, double threshold) {
+        return request(botId, userId, text, threshold, true);
     }
 
-    public CompletableFuture<List<String>> request(String botId, String userId, String text, boolean allowLogin) {
+    public CompletableFuture<List<String>> request(String botId, String userId, String text, double threshold, boolean allowLogin) {
         String url = String.format("http://%s/api/v1/bots/%s/converse/%s/secured?include=nlu", domain, botId, userId);
         CompletableFuture<List<String>> future = new CompletableFuture<>();
 
@@ -61,7 +61,7 @@ public class BotpressAPI {
                             login().thenAccept(token -> {
                                 self.token = token;
                                 LOGGER.info("Login successful");
-                                request(botId, userId, text, false)
+                                request(botId, userId, text, threshold, false)
                                         .thenAccept(future::complete)
                                         .exceptionally(e -> {
                                             future.completeExceptionally(e);
@@ -75,11 +75,8 @@ public class BotpressAPI {
                             future.completeExceptionally(new Exception("Received invalid token: " + self.token));
                         }
                     } else {
-                        boolean ambiguous = responseRootJson.getJSONObject("nlu").getBoolean("ambiguous");
-                        if (ambiguous) {
-                            LOGGER.warn("Skipping ambiguous request");
-                            future.complete(Collections.emptyList());
-                        } else {
+                        double confidence = responseRootJson.getJSONObject("nlu").getJSONObject("intent").getDouble("confidence");
+                        if (confidence >= threshold) {
                             ArrayList<String> responseTexts = new ArrayList<>();
                             JSONArray responseArrayJson = responseRootJson.getJSONArray("responses");
                             for (int i = 0; i < responseArrayJson.length(); i++) {
@@ -89,6 +86,9 @@ public class BotpressAPI {
                                 }
                             }
                             future.complete(responseTexts);
+                        } else {
+                            LOGGER.warn("Skipping ambiguous request with confidence: {} / {}", confidence, threshold);
+                            future.complete(Collections.emptyList());
                         }
                     }
                 } catch (Throwable e) {
