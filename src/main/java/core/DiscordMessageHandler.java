@@ -32,7 +32,7 @@ public class DiscordMessageHandler extends ListenerAdapter {
 
     @Override
     public void onGuildMessageReceived(@NotNull GuildMessageReceivedEvent event) {
-        if (messageIsValid(event.getMessage())) {
+        if (messageIsValid(event)) {
             botpressAPI.request(
                     System.getenv("BOTPRESS_BOTID"),
                     event.getAuthor().getId(),
@@ -53,20 +53,22 @@ public class DiscordMessageHandler extends ListenerAdapter {
         return content;
     }
 
-    private boolean messageIsValid(Message message) {
-        boolean channelAccess = StringUtil.stringIsInt(message.getChannel().getName()); /* enable access to all ticket channels */
+    private boolean messageIsValid(GuildMessageReceivedEvent event) {
+        boolean channelAccess = StringUtil.stringIsInt(event.getChannel().getName()); /* enable access to all ticket channels */
         if (!channelAccess) {
             JSONArray channels = settingsManager.get().getJSONArray("channels");
             for (int i = 0; i < channels.length(); i++) {
-                if (channels.getLong(i) == message.getChannel().getIdLong()) {
+                if (channels.getLong(i) == event.getChannel().getIdLong()) {
                     channelAccess = true;
                     break;
                 }
             }
         }
         return channelAccess &&
-                message.getGuild().getSelfMember().hasPermission(message.getTextChannel(), Permission.MESSAGE_WRITE) &&
-                !message.getAuthor().isBot();
+                !event.isWebhookMessage() &&
+                event.getMember().getRoles().stream().noneMatch(r -> r.getIdLong() == settingsManager.get().getLong("role_ignored")) &&
+                event.getGuild().getSelfMember().hasPermission(event.getChannel(), Permission.MESSAGE_WRITE) &&
+                !event.getAuthor().isBot();
     }
 
     private void handleResponses(GuildMessageReceivedEvent event, List<String> responses) {
